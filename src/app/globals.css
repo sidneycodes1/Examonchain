@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #060910;
+  --card: #0a0f1a;
+  --border: #1e2840;
+  --green: #00ffa3;
+  --purple: #9945ff;
+  --blue: #00c2ff;
+}
+
+body {
+  background: var(--bg);
+  color: #e2e8f0;
+}
+
+.btn-primary {
+  @apply px-6 py-2.5 rounded-lg font-medium transition-colors;
+  background: var(--green);
+  color: #060910;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.btn-secondary {
+  @apply px-6 py-2.5 rounded-lg font-medium border transition-colors;
+  border-color: var(--border);
+  background: transparent;
+}
+
+.btn-secondary:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.card {
+  @apply rounded-xl border p-6;
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.input {
+  @apply w-full px-4 py-2.5 rounded-lg border bg-transparent outline-none focus:ring-2 focus:ring-[var(--green)] focus:ring-offset-0 focus:ring-offset-[var(--card)];
+  border-color: var(--border);
+}
