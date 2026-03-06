@@ -10,7 +10,7 @@ interface AuthState {
   loading: boolean;
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
-  logout: () => void;
+  logout: () => void | Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -18,9 +18,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
   setUser: (user) => set({ user }),
   setLoading: (loading) => set({ loading }),
-  logout: () => {
-    document.cookie =
-      "examchain_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    set({ user: null });
+  logout: async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } finally {
+      set({ user: null });
+    }
   },
 }));

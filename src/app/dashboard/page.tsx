@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function DashboardPage() {
   const { user, loading, setUser, setLoading, logout } = useAuthStore();
@@ -22,8 +24,17 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-slate-400">Loading...</div>
+      <div className="min-h-screen px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-10 w-20" />
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -31,13 +42,16 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 gap-4">
           <h1 className="text-2xl font-bold">
             Dashboard — <span className="text-[#00FFA3]">{user?.email}</span>
           </h1>
-          <button onClick={logout} className="btn-secondary">
-            Logout
-          </button>
+          <div className="flex gap-2">
+            <ThemeToggle />
+            <button onClick={logout} className="btn-secondary">
+              Logout
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { updateQuizSession } from "@/lib/db";
+import { quizSaveSchema, type QuizSaveInput } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser();
@@ -9,28 +10,29 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { sessionId, score, total, onChainTx } = await req.json();
-    if (!sessionId || score == null || total == null) {
-      return NextResponse.json(
-        { error: "sessionId, score, and total required" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const parse = quizSaveSchema.safeParse(body);
+    if (!parse.success) {
+      const msg = parse.error.errors[0]?.message ?? "Invalid input";
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
+    const data = parse.data as QuizSaveInput;
+    const sessionId = String(data.sessionId);
 
-    const updated = await updateQuizSession(sessionId, {
-      score: Number(score),
-      total: Number(total),
+    const updates: Parameters<typeof updateQuizSession>[1] = {
+      score: Number(data.score),
       completedAt: new Date().toISOString(),
-      ...(onChainTx && { onChainTx }),
-    });
+    };
+    if (typeof data.onChainTx === "string") updates.onChainTx = data.onChainTx;
+
+    const updated = await updateQuizSession(sessionId, updates);
 
     if (!updated || updated.userId !== user.userId) {
       return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     }
 
     return NextResponse.json({ session: updated });
-  } catch (e) {
-    console.error(e);
+  } catch {
     return NextResponse.json(
       { error: "Save failed" },
       { status: 500 }

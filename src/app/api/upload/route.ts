@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { uploadToIpfs } from "@/lib/ipfs";
+import { isValidPdfBuffer } from "@/lib/pdfValidation";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const MIN_WORDS = 50;
+const ALLOWED_MIME = "application/pdf";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser();
@@ -14,9 +16,12 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    if (!file || file.type !== "application/pdf") {
+    if (!file) {
+      return NextResponse.json({ error: "No file provided." }, { status: 400 });
+    }
+    if (file.type !== ALLOWED_MIME) {
       return NextResponse.json(
-        { error: "Invalid file. PDF required." },
+        { error: "Invalid file type. PDF required." },
         { status: 400 }
       );
     }
@@ -28,7 +33,13 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileName = file.name;
+    if (!isValidPdfBuffer(buffer)) {
+      return NextResponse.json(
+        { error: "Invalid PDF file. File signature does not match a valid PDF." },
+        { status: 400 }
+      );
+    }
+    const fileName = (file.name || "document.pdf").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
 
     const pdfParse = (await import("pdf-parse")).default;
     const [ipfsHash, parseResult] = await Promise.all([
@@ -64,8 +75,7 @@ export async function POST(req: NextRequest) {
       pageCount: pageCount ?? 1,
       wordCount,
     });
-  } catch (e) {
-    console.error(e);
+  } catch {
     return NextResponse.json(
       { error: "Upload failed" },
       { status: 500 }

@@ -6,10 +6,12 @@
     "dev": "npx next dev",
     "build": "npx next build",
     "start": "npx next start",
-    "lint": "npx next lint"
+    "lint": "npx next lint",
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
+    "zod": "^3.24.1",
     "@pinata/sdk": "^2.1.0",
     "@solana/web3.js": "^1.95.4",
     "bcryptjs": "^2.4.3",
@@ -24,6 +26,8 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.9.0",
     "@types/pdf-parse": "^1.1.4",

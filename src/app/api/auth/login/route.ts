@@ -2,16 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getUserByEmail } from "@/lib/db";
 import { createToken } from "@/lib/auth";
+import { loginSchema } from "@/lib/validation";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
+  const id = getClientIdentifier(req);
+  const limit = checkRateLimit(`auth:${id}`);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: limit.retryAfter ? { "Retry-After": String(limit.retryAfter) } : undefined }
+    );
+  }
+
   try {
-    const { email, password } = await req.json();
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password required" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const parse = loginSchema.safeParse(body);
+    if (!parse.success) {
+      const msg = parse.error.errors[0]?.message ?? "Invalid input";
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
+    const { email, password } = parse.data;
     const user = await getUserByEmail(email);
     if (!user) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
@@ -30,8 +41,7 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
     return res;
-  } catch (e) {
-    console.error(e);
+  } catch {
     return NextResponse.json({ error: "Login failed" }, { status: 500 });
   }
 }

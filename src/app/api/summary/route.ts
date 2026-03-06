@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { generateSummary } from "@/lib/claude";
 import { createSummary } from "@/lib/db";
+import { summarySchema } from "@/lib/validation";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: NextRequest) {
@@ -11,13 +12,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { pdfText, pdfName, ipfsHash } = await req.json();
-    if (!pdfText || !pdfName || !ipfsHash) {
-      return NextResponse.json(
-        { error: "pdfText, pdfName, and ipfsHash required" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const parse = summarySchema.safeParse(body);
+    if (!parse.success) {
+      const msg = parse.error.errors[0]?.message ?? "Invalid input";
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
+    const { pdfText, pdfName, ipfsHash } = parse.data;
 
     const { bulletPoints, paragraph } = await generateSummary(pdfText);
     const points = bulletPoints.slice(0, 8);
@@ -33,8 +34,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ summary });
-  } catch (e) {
-    console.error(e);
+  } catch {
     return NextResponse.json(
       { error: "Summary generation failed" },
       { status: 500 }

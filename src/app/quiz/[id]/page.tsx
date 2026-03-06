@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { QuizCard } from "@/components/quiz/QuizCard";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { QuizSession } from "@/types";
 
 export default function QuizPage() {
@@ -84,8 +85,16 @@ export default function QuizPage() {
 
   if (loading || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-slate-400">Loading quiz...</div>
+      <div className="min-h-screen px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <Skeleton className="h-6 w-32 mb-6" />
+          <Skeleton className="h-4 w-full mb-4" />
+          <Skeleton className="h-4 w-[75%] mb-6" />
+          <Skeleton className="h-12 w-full mb-2" />
+          <Skeleton className="h-12 w-full mb-2" />
+          <Skeleton className="h-12 w-full mb-2" />
+          <Skeleton className="h-12 w-full" />
+        </div>
       </div>
     );
   }

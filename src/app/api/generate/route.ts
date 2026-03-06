@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { generateQuestions } from "@/lib/claude";
 import { createQuizSession } from "@/lib/db";
+import { generateSchema } from "@/lib/validation";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: NextRequest) {
@@ -11,13 +12,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { pdfText, pdfName, ipfsHash } = await req.json();
-    if (!pdfText || !pdfName || !ipfsHash) {
-      return NextResponse.json(
-        { error: "pdfText, pdfName, and ipfsHash required" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const parse = generateSchema.safeParse(body);
+    if (!parse.success) {
+      const msg = parse.error.errors[0]?.message ?? "Invalid input";
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
+    const { pdfText, pdfName, ipfsHash } = parse.data;
 
     const rawQuestions = await generateQuestions(pdfText);
     const questions = rawQuestions.slice(0, 10).map((q, i) => ({
@@ -35,8 +36,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ session });
-  } catch (e) {
-    console.error(e);
+  } catch {
     return NextResponse.json(
       { error: "Question generation failed" },
       { status: 500 }
