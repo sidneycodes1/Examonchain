@@ -1,3 +1,6 @@
+'use client';
+
+import { MaterialsProvider } from '@/context/MaterialsContext';
 import LayoutWrapper from '@/components/dashboard/LayoutWrapper';
 
 export default function ProtectedLayout({
@@ -5,5 +8,9 @@ export default function ProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <LayoutWrapper>{children}</LayoutWrapper>;
+  return (
+    <MaterialsProvider>
+      <LayoutWrapper>{children}</LayoutWrapper>
+    </MaterialsProvider>
+  );
 }

@@ -1,72 +1,45 @@
-import { jwtVerify, createRemoteJWKSet } from 'jose';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
-let jwksSet: ReturnType<typeof createRemoteJWKSet> | null = null;
+const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID!;
+const JWKS_URL = `https://auth.privy.io/api/v1/apps/${PRIVY_APP_ID}/jwks.json`;
 
-if (PRIVY_APP_ID) {
-  try {
-    jwksSet = createRemoteJWKSet(
-      new URL(`https://auth.privy.io/api/v1/apps/${PRIVY_APP_ID}/.well-known/jwks.json`)
-    );
-  } catch (err) {
-    console.error('Failed to initialize JWKS set:', err);
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function getJWKS() {
+  if (!jwks) {
+    jwks = createRemoteJWKSet(new URL(JWKS_URL));
   }
-}
-
-/**
- * Decodes a JWT token without cryptographic signature verification.
- */
-export function decodeTokenClaims(token: string) {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
-  } catch {
-    return null;
-  }
+  return jwks;
 }
 
 export interface PrivyClaims {
-  sub: string; // privy_id
-  iss?: string;
-  aud?: string;
-  exp?: number;
+  sub: string;
+  userId: string;
 }
 
-/**
- * Verifies a Privy token from the Authorization header.
- * Falls back to claim-decoding if network/JWKS fetching fails.
- */
 export async function verifyPrivyToken(authHeader: string | null): Promise<PrivyClaims> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new Error('Missing or invalid Authorization header');
   }
 
-  const token = authHeader.substring(7);
+  const token = authHeader.slice(7);
 
-  // 1. Try cryptographic verification if JWKS is available
-  if (jwksSet) {
-    try {
-      const { payload } = await jwtVerify(token, jwksSet, {
-        issuer: 'https://auth.privy.io',
-        audience: PRIVY_APP_ID,
-      });
-      return payload as unknown as PrivyClaims;
-    } catch (err) {
-      console.warn('Cryptographic token verification failed, trying fallback decode...', err);
+  try {
+    const { payload } = await jwtVerify(token, getJWKS(), {
+      issuer: 'privy.io',
+      audience: PRIVY_APP_ID,
+    });
+
+    if (!payload.sub) {
+      throw new Error('Missing sub claim in token');
     }
-  }
 
-  // 2. Fallback: decode claims manually and verify expiration and audience/issuer structures
-  const claims = decodeTokenClaims(token) as PrivyClaims | null;
-  if (!claims || !claims.sub) {
-    throw new Error('Invalid token payload');
+    return {
+      userId: payload.sub,
+      sub: payload.sub,
+    };
+  } catch (error) {
+    console.error('JWT verification failed:', error);
+    throw new Error('Invalid or expired token');
   }
-
-  // Verify expiration
-  if (claims.exp && claims.exp * 1000 < Date.now()) {
-    throw new Error('Token has expired');
-  }
-
-  return claims;
 }

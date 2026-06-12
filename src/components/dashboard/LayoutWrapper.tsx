@@ -8,30 +8,30 @@ import Sidebar from './Sidebar';
 import ChatArea from './ChatArea';
 import StudioPanel from './StudioPanel';
 import MobileBottomTabs from './MobileBottomTabs';
-import { Material } from '@/types/database';
+import { useMaterials } from '@/context/MaterialsContext';
+import Modal from '@/components/ui/Modal';
+import FileDropZone from '@/components/upload/FileDropZone';
 
 interface LayoutWrapperProps {
-  materials?: Material[];
-  selectedMaterial?: Material | null;
-  onSelectMaterial?: (material: Material) => void;
-  onDeleteMaterial?: (id: string) => void;
-  onOpenUpload?: () => void;
   children?: React.ReactNode;
 }
 
-export default function LayoutWrapper({
-  materials = [],
-  selectedMaterial = null,
-  onSelectMaterial = () => {},
-  onDeleteMaterial = () => {},
-  onOpenUpload = () => {},
-  children,
-}: LayoutWrapperProps) {
+export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const { getAccessToken, authenticated, ready, logout } = usePrivy();
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<'sources' | 'chat' | 'studio'>('chat');
   const [profile, setProfile] = useState<{ phantomWallet?: string; totalTokensEarned?: number } | null>(null);
+
+  const {
+    materials,
+    selectedMaterial,
+    setSelectedMaterial,
+    deleteMaterial,
+    isUploadModalOpen,
+    setIsUploadModalOpen,
+    refreshMaterials,
+  } = useMaterials();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -79,9 +79,9 @@ export default function LayoutWrapper({
     <Sidebar
       materials={materials}
       selectedMaterial={selectedMaterial}
-      onSelectMaterial={onSelectMaterial}
-      onDeleteMaterial={onDeleteMaterial}
-      onOpenUpload={onOpenUpload}
+      onSelectMaterial={setSelectedMaterial}
+      onDeleteMaterial={deleteMaterial}
+      onOpenUpload={() => setIsUploadModalOpen(true)}
     />
   );
 
@@ -115,6 +115,23 @@ export default function LayoutWrapper({
       {isMobile && (
         <MobileBottomTabs activeTab={activeTab} onTabChange={setActiveTab} />
       )}
+
+      {/* Shared Upload Modal */}
+      <Modal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        title="Upload Study Material"
+      >
+        <div className="py-2">
+          <FileDropZone
+            onUploadComplete={(newMat) => {
+              setIsUploadModalOpen(false);
+              refreshMaterials();
+              setSelectedMaterial(newMat);
+            }}
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

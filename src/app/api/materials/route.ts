@@ -38,13 +38,9 @@ export async function POST(req: NextRequest) {
     if (file.type === 'application/pdf' || fileExtension === 'pdf') {
       try {
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const pdfParserModule = (await import('pdf-parse')) as unknown as Record<string, unknown>;
-        // Safely extract the parsing function reference
-        const pdfParser = (pdfParserModule.default || pdfParserModule) as unknown as (
-          dataBuffer: Buffer
-        ) => Promise<{ text: string }>;
-        
-        const pdfData = await pdfParser(fileBuffer);
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const pdf = require('pdf-parse');
+        const pdfData = await pdf(fileBuffer);
         extractedText = pdfData.text || '';
       } catch (pdfErr) {
         console.error('Failed to parse PDF text:', pdfErr);

@@ -7,7 +7,7 @@ import LayoutWrapper from '@/components/dashboard/LayoutWrapper';
 import QuizContainer from '@/components/quiz/QuizContainer';
 import Spinner from '@/components/ui/Spinner';
 import Toast from '@/components/ui/Toast';
-import { Material } from '@/types/database';
+import { useMaterials } from '@/context/MaterialsContext';
 
 interface QuizOption {
   id: string;
@@ -31,14 +31,11 @@ export default function QuizPage() {
   const router = useRouter();
   const { id } = useParams() as { id: string };
   const { getAccessToken, authenticated, ready, logout } = usePrivy();
+  const { materials, selectedMaterial, setSelectedMaterial } = useMaterials();
 
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-
-  // States to synchronize LayoutWrapper layout
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -47,12 +44,11 @@ export default function QuizPage() {
   }, [ready, authenticated, router]);
 
   useEffect(() => {
-    const fetchQuizAndMaterials = async () => {
+    const fetchQuizDetails = async () => {
       try {
         const token = await getAccessToken();
         if (!token) return;
 
-        // Fetch Quiz details
         const quizRes = await fetch(`/api/quizzes/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -71,31 +67,6 @@ export default function QuizPage() {
         } else {
           setToast({ message: quizJson.error || 'Failed to fetch quiz', type: 'error' });
         }
-
-        // Fetch Materials list for sidebar mapping
-        const materialsRes = await fetch('/api/materials', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (materialsRes.status === 401) {
-          logout();
-          router.push('/login');
-          return;
-        }
-
-        const materialsJson = await materialsRes.json() as { success: boolean; data?: Material[] };
-        if (materialsJson.success && materialsJson.data) {
-          setMaterials(materialsJson.data);
-          
-          if (quizJson.data) {
-            const currentMat = materialsJson.data.find(m => m.id === quizJson.data?.materialId);
-            if (currentMat) {
-              setSelectedMaterial(currentMat);
-            }
-          }
-        }
       } catch (err) {
         console.error('Error fetching quiz details:', err);
         setToast({ message: 'Failed to retrieve quiz details', type: 'error' });
@@ -105,34 +76,29 @@ export default function QuizPage() {
     };
 
     if (ready && authenticated && id) {
-      fetchQuizAndMaterials();
+      fetchQuizDetails();
     }
   }, [ready, authenticated, id, getAccessToken, logout, router]);
 
-  const handleClose = () => {
-    router.push('/dashboard');
-  };
-
-  const handleSelectMaterial = (material: Material) => {
-    setSelectedMaterial(material);
-    router.push('/dashboard');
-  };
+  // Sync the context's selected material with the quiz's source material
+  useEffect(() => {
+    if (quiz && materials.length > 0) {
+      const currentMat = materials.find(m => m.id === quiz.materialId);
+      if (currentMat && selectedMaterial?.id !== currentMat.id) {
+        setSelectedMaterial(currentMat);
+      }
+    }
+  }, [quiz, materials, selectedMaterial, setSelectedMaterial]);
 
   return (
-    <LayoutWrapper
-      materials={materials}
-      selectedMaterial={selectedMaterial}
-      onSelectMaterial={handleSelectMaterial}
-      onDeleteMaterial={async () => {}}
-      onOpenUpload={() => router.push('/dashboard')}
-    >
+    <LayoutWrapper>
       <div className="flex-1 flex justify-center items-center h-[calc(100vh-4rem)] border-r border-[#2A2A2A]">
         {loading ? (
           <Spinner size="large" />
         ) : quiz ? (
           <QuizContainer
             quiz={quiz}
-            onClose={handleClose}
+            onClose={() => router.push('/dashboard')}
           />
         ) : (
           <div className="text-[#A0A0A0] text-sm">Failed to load quiz details.</div>
