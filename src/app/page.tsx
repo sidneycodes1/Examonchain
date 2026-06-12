@@ -1,30 +1,24 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-export default function LandingPage() {
+export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // For now, redirect to dashboard
+    router.push('/dashboard');
+  }, [router]);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 relative">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      <div className="text-center max-w-2xl">
-        <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-[#00FFA3] via-[#00C2FF] to-[#9945FF] bg-clip-text text-transparent">
-          ExamChain
-        </h1>
-        <p className="text-xl text-slate-400 mb-8">
-          Upload your lecture notes. Get real exam-style questions. Own your
-          academic record on Solana.
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold mb-4 text-[#F5F5F7]">ExamChain</h1>
+        <p className="text-lg mb-8 text-[#A0A0A0]">
+          Study Smarter. Earn Crypto. Prove It.
         </p>
-        <div className="flex gap-4 justify-center flex-wrap">
-          <Link href="/login" className="btn-secondary">
-            Login
-          </Link>
-          <Link href="/register" className="btn-primary">
-            Get Started
-          </Link>
-        </div>
+        <p className="text-[#A0A0A0]">Loading...</p>
       </div>
     </div>
   );

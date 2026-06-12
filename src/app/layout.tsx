@@ -1,26 +1,23 @@
-import type { Metadata } from "next";
-import { Toaster } from "react-hot-toast";
-import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import "./globals.css";
+import type { Metadata } from 'next';
+import '../styles/globals.css';
+import AuthProvider from '@/components/auth/PrivyProvider';
 
 export const metadata: Metadata = {
-  title: "ExamChain — AI Exam Prep on Solana",
-  description:
-    "Upload your lecture notes. Get real exam-style questions. Own your academic record on Solana.",
+  title: 'ExamChain',
+  description: 'Study Smarter. Earn Crypto. Prove It.',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <ThemeProvider>
+    <html lang="en" className="dark">
+      <body className="bg-[#0D0D0D] text-[#F5F5F7]">
+        <AuthProvider>
           {children}
-          <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
-        </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

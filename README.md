@@ -1,184 +1,36 @@
-# ExamChain
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-AI-powered exam preparation platform on Solana. Upload PDFs, get real exam-style questions and summaries, and (optionally) store quiz scores on-chain.
+## Getting Started
 
-> Upload your lecture notes. Get real exam-style questions. Own your academic record on Solana.
-
----
-
-## Tech Stack
-
-- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
-- **State**: Zustand
-- **AI**: Claude (`claude-sonnet-4-20250514`) via `@anthropic-ai/sdk`
-- **Storage**: IPFS via Pinata
-- **Auth**: Email + password, JWT (`jose`), httpOnly cookies
-- **Blockchain**: Solana + Anchor program for on-chain quiz scores
-- **DB**: Local JSON file (`data/db.json`) – can be swapped for Postgres
-
----
-
-## Features
-
-- **Authentication**
-  - Email + password login and registration (JWT, httpOnly cookie)
-  - Auth state stored in a small Zustand store on the client
-
-- **PDF Upload**
-  - Drag-and-drop or file picker
-  - Max 10MB PDFs
-  - Uploaded to IPFS (Pinata)
-  - Text extracted on the server with `pdf-parse`
-  - Scanned / image-only PDFs rejected with a clear 422 error
-
-- **AI Question Generation**
-  - Uses Claude to generate **exactly 10** multiple-choice questions per PDF
-  - Questions focus on application/analysis (not just recall)
-  - Each question has 4 options, correct index, and explanation
-  - Quiz session stored in the JSON DB
-
-- **AI Summary Mode**
-  - Claude generates:
-    - 8 bullet-point key ideas
-    - 3–4 sentence paragraph summary
-
-- **Quiz Interface**
-  - Question-by-question flow
-  - Immediate feedback with color states (correct / incorrect)
-  - Explanation displayed after each answer
-  - Final score and simple emoji-based feedback
-
-- **On-Chain Score Storage (Solana)**
-  - Anchor program sketch in `programs/examchain/src/lib.rs`
-  - PDA seeds: `["quiz", student_pubkey, session_id]`
-  - Stores `student`, `session_id`, `pdf_hash`, `score`, `total`, `timestamp`
-  - Frontend already wired with a placeholder Solana client for future integration
-
-- **Quiz History**
-  - History page shows previous quiz sessions with scores
-  - Includes Solana explorer links when an on-chain tx is present
-
----
-
-## Getting Started (Local Dev)
-
-### 1. Clone and install
-
-```bash
-git clone https://github.com/<your-username>/examchain.git
-cd examchain
-npm install
-```
-
-### 2. Environment variables
-
-Copy `.env.local.example` to `.env.local` and fill in:
-
-- `ANTHROPIC_API_KEY` — Claude API key
-- `JWT_SECRET` — random string for signing JWTs
-- `PINATA_API_KEY` / `PINATA_SECRET_API_KEY` — Pinata API keys
-- `SOLANA_PROGRAM_ID` — (optional) your deployed Anchor program ID
-
-You can leave the Solana program ID empty while working only on the web UX.
-
-### 3. Run the app
+First, run the development server:
 
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Then open:
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-- `http://localhost:3000`
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-Login / register with any email + password (data is stored locally in `data/db.json`).
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
----
+## Learn More
 
-## Project Structure
+To learn more about Next.js, take a look at the following resources:
 
-```text
-src/
-  app/
-    (auth)/login/page.tsx         # email/password login
-    (auth)/register/page.tsx      # registration
-    dashboard/page.tsx            # main hub for logged-in users
-    upload/page.tsx               # PDF upload + AI actions
-    quiz/[id]/page.tsx            # quiz player
-    summary/[id]/page.tsx         # summary view
-    history/page.tsx              # quiz history
-    api/                          # all API routes
-  lib/
-    db.ts                         # JSON file DB helper
-    auth.ts                       # JWT helpers + getAuthUser
-    claude.ts                     # calls to Anthropic
-    ipfs.ts                       # Pinata client
-    solana.ts                     # Solana helpers (placeholder client)
-  components/
-    quiz/QuizCard.tsx
-    summary/SummaryView.tsx
-  store/
-    authStore.ts                  # small Zustand auth store
-programs/
-  examchain/src/lib.rs            # Anchor program for quiz scores
-data/
-  db.json                         # local JSON database (dev only)
-```
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
----
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Roadmap / Ideas for Contributors
+## Deploy on Vercel
 
-These are great places to contribute:
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-- **1. Solana integration**
-  - Wire the existing Anchor program into the frontend using `@coral-xyz/anchor` or a plain `@solana/web3.js` client.
-  - Save quiz scores on-chain when a user finishes a quiz.
-  - Show transaction status and errors in the UI.
-
-- **2. Phantom wallet login**
-  - Add Phantom wallet adapter and connect button.
-  - Allow “login with wallet” as an alternative identity.
-  - Link email account + wallet on the backend.
-
-- **3. Better question quality controls**
-  - Add sliders/toggles for difficulty (easy/medium/hard).
-  - Add exam style presets (MCQ, short answer, etc.).
-
-- **4. Analytics & progress**
-  - Show score trends over time.
-  - Per-PDF statistics (best score, attempts, last score).
-
-- **5. Database backend**
-  - Swap `data/db.json` for Postgres (Prisma, Drizzle, or raw SQL).
-  - Keep the same TypeScript interfaces from `src/types`.
-
-- **6. UI / UX polish**
-  - Improve mobile layout.
-  - Add dark/light mode toggle (keeping the Solana-inspired palette).
-  - Add animations and skeleton loaders where it makes sense.
-
-If you have other ideas, feel free to open an issue or discussion!
-
----
-
-## Contributing
-
-1. **Fork** the repo on GitHub.
-2. **Clone** your fork and create a feature branch:
-
-   ```bash
-   git checkout -b feature/my-idea
-   ```
-
-3. **Run the app locally** and make your changes.
-4. **Add tests or updates** to docs if needed.
-5. **Commit** with a clear message and **open a Pull Request** against `main`.
-
-Please see `CONTRIBUTING.md` for more details and guidelines.
-
----
-
-## License
-
-This project is licensed under the **MIT License** – see `LICENSE` for details.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
