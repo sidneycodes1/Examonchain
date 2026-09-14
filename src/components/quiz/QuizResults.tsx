@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivySafe as usePrivy } from '@/components/auth/PrivySafeProvider';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import Toast from '@/components/ui/Toast';

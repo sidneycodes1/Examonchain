@@ -11,7 +11,7 @@ const nextConfig = {
     return config;
   },
   experimental: {
-    serverComponentsExternalPackages: ["pdf-parse"],
+    serverComponentsExternalPackages: ["pdf-parse", "@privy-io/react-auth", "viem", "ox"],
   },
 };
 module.exports = nextConfig;

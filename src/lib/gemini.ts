@@ -3,6 +3,13 @@ import { z } from 'zod';
 
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || '';
 
+export function isGeminiConfigured(): boolean {
+  const key = GEMINI_API_KEY.trim();
+  if (!key || key.length < 10) return false;
+  if (/placeholder|your-key|xxx|test-key|changeme/i.test(key)) return false;
+  return true;
+}
+
 const OptionSchema = z.object({
   text: z.string().min(1),
   isCorrect: z.boolean(),
@@ -21,8 +28,8 @@ const QuizSchema = z.object({
 export type GeneratedQuiz = z.infer<typeof QuizSchema>;
 
 export async function generateQuizFromText(text: string): Promise<GeneratedQuiz> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('Missing GOOGLE_GEMINI_API_KEY environment variable');
+  if (!isGeminiConfigured()) {
+    throw new Error('AI quiz generation is not configured yet');
   }
 
   if (!text || text.trim().length === 0) {

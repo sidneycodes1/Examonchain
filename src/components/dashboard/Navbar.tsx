@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivySafe as usePrivy } from '@/components/auth/PrivySafeProvider';
 import PrivyAuthButton from '@/components/auth/PrivyAuthButton';
 
 interface NavbarProps {

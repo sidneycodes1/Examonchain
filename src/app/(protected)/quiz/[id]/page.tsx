@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
-import LayoutWrapper from '@/components/dashboard/LayoutWrapper';
+import { usePrivySafe as usePrivy } from '@/components/auth/PrivySafeProvider';
 import QuizContainer from '@/components/quiz/QuizContainer';
 import Spinner from '@/components/ui/Spinner';
 import Toast from '@/components/ui/Toast';
@@ -91,7 +90,7 @@ export default function QuizPage() {
   }, [quiz, materials, selectedMaterial, setSelectedMaterial]);
 
   return (
-    <LayoutWrapper>
+    <>
       <div className="flex-1 flex justify-center items-center h-[calc(100vh-4rem)] border-r border-[#2A2A2A]">
         {loading ? (
           <Spinner size="large" />
@@ -112,6 +111,6 @@ export default function QuizPage() {
           onClose={() => setToast(null)}
         />
       )}
-    </LayoutWrapper>
+    </>
   );
 }

@@ -4,6 +4,8 @@ node_modules/
 .next/
 build/
 dist/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
 .vscode/
 .idea/
 *.swp

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPrivyToken } from '@/lib/auth';
+import { verifyPrivyToken, isAuthErrorMessage } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('GET material detail error:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
   }
 }
 
@@ -62,10 +62,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Unauthorized profile' }, { status: 401 });
     }
 
-    // Verify ownership and get material
+    // Verify ownership and get material (including storage path for cleanup)
     const { data: material, error } = await supabaseAdmin
       .from('materials')
-      .select('id')
+      .select('id, storage_path')
       .eq('id', materialId)
       .eq('user_id', dbUser.id)
       .is('deleted_at', null)
@@ -86,10 +86,21 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Failed to delete material' }, { status: 500 });
     }
 
+    // Delete the underlying file from Supabase Storage (best-effort: row stays soft-deleted either way)
+    if (material.storage_path) {
+      const { error: storageError } = await supabaseAdmin
+        .storage
+        .from('study-materials')
+        .remove([material.storage_path]);
+      if (storageError) {
+        console.warn('Soft-deleted material row but failed to remove Storage object:', storageError);
+      }
+    }
+
     return NextResponse.json({ success: true, message: 'Material successfully deleted' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('DELETE material error:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
   }
 }

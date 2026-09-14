@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPrivyToken } from '@/lib/auth';
+import { verifyPrivyToken, isAuthErrorMessage } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest) {
@@ -58,6 +58,6 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('GET profile error:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
   }
 }

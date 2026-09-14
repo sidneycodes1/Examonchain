@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPrivyToken } from '@/lib/auth';
+import { verifyPrivyToken, isAuthErrorMessage } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
 import { generateQuizFromText } from '@/lib/gemini';
+import { QuizzesPostSchema } from '@/lib/validators';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,11 +10,15 @@ export async function POST(req: NextRequest) {
     const claims = await verifyPrivyToken(authHeader);
     const privyId = claims.sub;
 
-    const { materialId } = await req.json() as { materialId: string };
-
-    if (!materialId) {
-      return NextResponse.json({ error: 'Missing materialId' }, { status: 400 });
+    const bodyParsed = QuizzesPostSchema.safeParse(await req.json());
+    if (!bodyParsed.success) {
+      return NextResponse.json(
+        { error: bodyParsed.error.issues[0]?.message || 'Invalid request body' },
+        { status: 400 }
+      );
     }
+
+    const { materialId } = bodyParsed.data;
 
     const supabaseAdmin = createAdminClient();
 
@@ -48,7 +53,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Call Gemini to generate quiz
-    const generated = await generateQuizFromText(material.extracted_text);
+    let generated;
+    try {
+      generated = await generateQuizFromText(material.extracted_text);
+    } catch (genErr) {
+      const genMsg = genErr instanceof Error ? genErr.message : '';
+      if (genMsg === 'AI quiz generation is not configured yet') {
+        return NextResponse.json({ error: 'AI quiz generation is not configured yet' }, { status: 503 });
+      }
+      throw genErr;
+    }
 
     // Insert quiz row
     const { data: quizRow, error: quizError } = await supabaseAdmin
@@ -124,7 +138,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('POST quiz API error:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
   }
 }
 
@@ -161,6 +175,6 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('GET quizzes API error:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivySafe as usePrivy } from '@/components/auth/PrivySafeProvider';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Spinner from '@/components/ui/Spinner';
 import Toast from '@/components/ui/Toast';

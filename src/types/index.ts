@@ -1,1 +1,2 @@
-// Index types placeholder
+export * from './database';
+export * from './quiz';

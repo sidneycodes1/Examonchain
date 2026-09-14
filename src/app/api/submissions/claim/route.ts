@@ -1,7 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPrivyToken } from '@/lib/auth';
+import { verifyPrivyToken, isAuthErrorMessage } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
-import { distributeTokens } from '@/lib/solana';
+import { distributeTokens, isValidSolanaAddress } from '@/lib/solana';
+import { ClaimPostSchema } from '@/lib/validators';
+
+export async function GET(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('Authorization');
+    const claims = await verifyPrivyToken(authHeader);
+    const privyId = claims.sub;
+
+    const supabaseAdmin = createAdminClient();
+
+    const { data: dbUser } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('privy_id', privyId)
+      .maybeSingle();
+
+    if (!dbUser) {
+      return NextResponse.json({ success: true, data: [] });
+    }
+
+    const { data: pending, error } = await supabaseAdmin
+      .from('token_distributions')
+      .select('id, amount, status, quiz_result_id, quiz_results(score)')
+      .eq('user_id', dbUser.id)
+      .neq('status', 'confirmed')
+      .order('distributed_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to list pending distributions:', error);
+      return NextResponse.json({ error: 'Failed to list pending claims' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data: pending ?? [] });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    console.error('GET claim list error:', error);
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,10 +48,15 @@ export async function POST(req: NextRequest) {
     const claims = await verifyPrivyToken(authHeader);
     const privyId = claims.sub;
 
-    const { resultId } = await req.json() as { resultId: string };
-    if (!resultId) {
-      return NextResponse.json({ error: 'Missing resultId' }, { status: 400 });
+    const bodyParsed = ClaimPostSchema.safeParse(await req.json());
+    if (!bodyParsed.success) {
+      return NextResponse.json(
+        { error: bodyParsed.error.issues[0]?.message || 'Invalid request body' },
+        { status: 400 }
+      );
     }
+
+    const { resultId } = bodyParsed.data;
 
     const supabaseAdmin = createAdminClient();
 
@@ -27,9 +71,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
-    // Check if user has linked a valid Solana wallet address
+    // Check if user has linked a valid Solana wallet address (base58, 32 bytes)
     const recipient = dbUser.phantom_wallet;
-    const isWalletValid = recipient && !recipient.startsWith('temp-') && recipient.length >= 32;
+    const isWalletValid = isValidSolanaAddress(recipient);
     if (!isWalletValid) {
       return NextResponse.json({ error: 'Please link your Phantom wallet first in Settings' }, { status: 400 });
     }
@@ -62,6 +106,14 @@ export async function POST(req: NextRequest) {
         .from('token_distributions')
         .update({ status: 'failed' })
         .eq('id', distRow.id);
+
+      const solanaMsg = solanaErr instanceof Error ? solanaErr.message : '';
+      if (solanaMsg === 'Token rewards are not configured yet') {
+        return NextResponse.json({ error: 'Token rewards are not configured yet' }, { status: 503 });
+      }
+      if (solanaMsg === 'Invalid recipient wallet address') {
+        return NextResponse.json({ error: 'Please link your Phantom wallet first in Settings' }, { status: 400 });
+      }
 
       return NextResponse.json({ error: 'Solana Devnet transfer failed. Please try again later.' }, { status: 500 });
     }
@@ -98,6 +150,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('POST claim retry API error:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
   }
 }

@@ -17,8 +17,7 @@ export interface PrivyClaims {
   userId: string;
 }
 
-export async function verifyPrivyToken(authHeader: string | null): Promise<PrivyClaims> {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+export async function verifyPrivyToken(authHeader: string | null): Promise<PrivyClaims> {  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new Error('Missing or invalid Authorization header');
   }
 
@@ -42,4 +41,12 @@ export async function verifyPrivyToken(authHeader: string | null): Promise<Privy
     console.error('JWT verification failed:', error);
     throw new Error('Invalid or expired token');
   }
+}
+
+/** Auth failures (missing/malformed/expired Privy JWT) should surface as 401, not 500. */
+export function isAuthErrorMessage(message: string): boolean {
+  return (
+    message === 'Missing or invalid Authorization header' ||
+    message === 'Invalid or expired token'
+  );
 }

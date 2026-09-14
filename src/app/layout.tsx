@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import '../styles/globals.css';
 import AuthProvider from '@/components/auth/PrivyProvider';
+import PrivySafeProvider from '@/components/auth/PrivySafeProvider';
 
 export const metadata: Metadata = {
   title: 'ExamChain',
@@ -16,7 +17,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="bg-[#0D0D0D] text-[#F5F5F7]">
         <AuthProvider>
-          {children}
+          <PrivySafeProvider>{children}</PrivySafeProvider>
         </AuthProvider>
       </body>
     </html>

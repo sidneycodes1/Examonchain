@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPrivyToken } from '@/lib/auth';
+import { verifyPrivyToken, isAuthErrorMessage } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { isGeminiConfigured } from '@/lib/gemini';
+import { ChatPostSchema } from '@/lib/validators';
 
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || '';
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,18 +13,18 @@ export async function POST(req: NextRequest) {
     const claims = await verifyPrivyToken(authHeader);
     const privyId = claims.sub;
 
-    const { materialId, message, history = [] } = await req.json() as {
-      materialId: string;
-      message: string;
-      history?: ChatMessage[];
-    };
-
-    if (!materialId || !message) {
-      return NextResponse.json({ error: 'Missing materialId or message' }, { status: 400 });
+    const bodyParsed = ChatPostSchema.safeParse(await req.json());
+    if (!bodyParsed.success) {
+      return NextResponse.json(
+        { error: bodyParsed.error.issues[0]?.message || 'Invalid request body' },
+        { status: 400 }
+      );
     }
 
-    if (!GEMINI_API_KEY) {
-      return NextResponse.json({ error: 'Missing GOOGLE_GEMINI_API_KEY from environment' }, { status: 500 });
+    const { materialId, message, history } = bodyParsed.data;
+
+    if (!isGeminiConfigured()) {
+      return NextResponse.json({ error: 'AI chat is not configured yet' }, { status: 503 });
     }
 
     const supabaseAdmin = createAdminClient();
@@ -90,6 +87,6 @@ ${material.extracted_text || '(No text extracted from this study material)'}
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('Gemini chat API error:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
   }
 }

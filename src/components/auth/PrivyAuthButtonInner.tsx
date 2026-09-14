@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivySafe as usePrivy } from '@/components/auth/PrivySafeProvider';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 

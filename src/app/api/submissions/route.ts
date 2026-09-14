@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyPrivyToken } from '@/lib/auth';
+import { verifyPrivyToken, isAuthErrorMessage } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/server';
-import { distributeTokens } from '@/lib/solana';
+import { distributeTokens, isValidSolanaAddress } from '@/lib/solana';
+import { SubmissionsPostSchema } from '@/lib/validators';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,14 +10,16 @@ export async function POST(req: NextRequest) {
     const claims = await verifyPrivyToken(authHeader);
     const privyId = claims.sub;
 
-    const { quizId, answers } = await req.json() as {
-      quizId: string;
-      answers: Record<string, string> | { questionId: string; optionId: string }[];
-    };
+    const parsed = SubmissionsPostSchema.safeParse(await req.json());
 
-    if (!quizId || !answers) {
-      return NextResponse.json({ error: 'Missing quizId or answers' }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || 'Invalid request body' },
+        { status: 400 }
+      );
     }
+
+    const { quizId, answers } = parsed.data;
 
     const supabaseAdmin = createAdminClient();
 
@@ -151,9 +154,9 @@ export async function POST(req: NextRequest) {
       } else {
         const distId = distRow.id;
 
-        // Check if user has a valid Solana wallet address
+        // Check if user has a valid Solana wallet address (base58, 32 bytes)
         const recipient = dbUser.phantom_wallet;
-        const isWalletValid = recipient && !recipient.startsWith('temp-') && recipient.length >= 32;
+        const isWalletValid = isValidSolanaAddress(recipient);
 
         if (isWalletValid) {
           try {
@@ -206,6 +209,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     console.error('POST quiz submissions route error:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: isAuthErrorMessage(message) ? 401 : 500 });
   }
 }
